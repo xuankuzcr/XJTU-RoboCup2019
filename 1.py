@@ -27,25 +27,4 @@ try:
 except:
     pass
 
-#contours, hierarchy = cv2.findContours(res, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
- #res=_.copy()
-
-
-#size=(int(video.get(cv2.CAP_PROP_FRAME_WIDTH)),int(viedo.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-#print('size:'+repr(size))
-
-
-
-
-'''
-for (x,y,w,h) in faces:
-        img = cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)#在每一帧中画出人脸的矩阵
-
-
-        roi_gray = gray[y:y+h,x:x+w]
-        eyes = eye_cascade.detectMultiScale(roi_gray,1.03,5,0,(40,40))#在人脸的范围内寻找眼睛
-
-        for (ex,ey,ew,eh) in eyes:
-            cv2.rectangle(img,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
-'''
-#画矩形
+#林展辉
