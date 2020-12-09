@@ -1,0 +1,129 @@
+option(LookAround)
+{
+    initial_state(lookAround)
+    {
+       
+      
+       transition
+        {
+            if(action_done)
+                goto lookAround2;
+        }
+        action
+        {
+            SetHeadPanTilt((float) 0.f ,(float) 0.38f , 50_deg);
+        }
+    }
+    
+    state(lookAround2)
+    {
+        transition
+        {
+            if(action_done)
+                goto lookAround3;
+        }
+        action
+        {
+            SetHeadPanTilt((float) 1.f ,(float) 0.38f , 50_deg);
+        }
+    }
+    
+    state(lookAround3)
+    {
+        transition
+        {
+            if(action_done)
+                goto lookAround2;
+        }
+        action
+        {
+            SetHeadPanTilt((float) -1.f ,(float) 0.38f , 50_deg);
+        }
+    }
+    
+   /** state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) 1.5f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) 1.f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) 0.5f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) 0.f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) -0.5f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) -1.f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    state(lookRound3)
+    {
+        transition
+        {
+            if(state_time>500.f)
+        }
+        action
+        {
+            SetHeadPanTilt((float) 1.f ,(float) 0.38f , 150_deg);
+        }
+    }
+    
+    **/
+}

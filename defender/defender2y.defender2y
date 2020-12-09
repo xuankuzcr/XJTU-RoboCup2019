@@ -1,0 +1,1987 @@
+//负责右半场的防守
+option(defender2y)
+{
+    Vector2f ball = theBallModel.estimate.position; //球相对坐标
+    Vector2f globalBall = Transformation::robotToField(theRobotPose, ball);//球的绝对位置
+    const float a=globalBall.x();
+    const float b=globalBall.y();
+    const float c=theRobotPose.translation.x(); //机器人绝对坐标
+    const float d=theRobotPose.translation.y();
+    const Vector2f initial=Transformation::fieldToRobot(theRobotPose,Vector2f(-3200.f,-600.f));//走到初始位置
+    const Vector2f qiumen=Transformation::fieldToRobot(theRobotPose,Vector2f(-4500.f,0.f));//球门的坐标x:theFieldDimensions.xPosOwnGroundline y:theFieldDimensions.yPosCenterGoal
+    const float theta1=atan(-(qiumen.x()-theBallModel.estimate.position.x())/(qiumen.y()-theBallModel.estimate.position.y()));
+    const float chuix = ball.norm()*cos(theta1)*cos(theBallModel.estimate.position.angle()-theta1);
+    const float chuiy = ball.norm()*sin(theta1)*cos(theBallModel.estimate.position.angle()-theta1);//dangqiu垂足角度
+    const Vector2f chuizu=Transformation::robotToField(theRobotPose,Vector2f(chuix,chuiy));//垂足转化成绝对坐标
+    const Vector2f back=Transformation::fieldToRobot(theRobotPose,Vector2f(-1500.f,-500.f));//到后场walktoback
+    //const Vector2f back=Transformation::fieldToRobot(theRobotPose,Vector2f(-700.f,0.f));//到后场walktoback
+    const Vector2f line2=Transformation::fieldToRobot(theRobotPose,Vector2f(c,b));//turntoline2的位置
+    const float qiex=-3900.f;
+    const float qiey=b-((a+3900.f)*b/(a+4500.f));
+    const Vector2f qie=Transformation::fieldToRobot(theRobotPose,Vector2f(qiex,qiey));//切点的相对位置
+    const float jiaoy=(1100*c-8400*d-4950000)*b/(1100*a+4950000+a*d+4500*d-b*c-3900*b);
+    const float jiaox=((a+4500)*jiaoy+4500*b)/b;
+    const Vector2f jiaodian=Transformation::fieldToRobot(theRobotPose,Vector2f(jiaox,jiaoy));//人和球门边角连线与球与球门中心连线交点
+    std::vector<Teammate> t = theTeamData.teammates;
+    Vector2f ball1;
+    Vector2f globalBall1;
+    const Vector2f jinquRight=Transformation::fieldToRobot(theRobotPose,Vector2f(-4500.f,-200.f));
+    const Vector2f jinquLeft=Transformation::fieldToRobot(theRobotPose,Vector2f(-4500.f,200.f));
+    const Vector2f jinquqianRight=Transformation::fieldToRobot(theRobotPose,Vector2f(-3700.f,-1200.f));
+    const Vector2f jinquqianLeft=Transformation::fieldToRobot(theRobotPose,Vector2f(-3700.f,1200.f));
+    const  Vector2f midSpoty  = Transformation::fieldToRobot(theRobotPose,Vector2f(-3200,-1200));
+    const  Vector2f leftSpoty     = Transformation::fieldToRobot(theRobotPose,Vector2f(-2300,-550));
+    const  Vector2f rightSpoty       = Transformation::fieldToRobot(theRobotPose,Vector2f(-2300,-1800));
+    int j=0;
+    const  Vector2f midSpot  = Transformation::fieldToRobot(theRobotPose,Vector2f(-3200,0));
+  const  Vector2f leftSpot      = Transformation::fieldToRobot(theRobotPose,Vector2f(-2300,1200));
+  const  Vector2f rightSpot       = Transformation::fieldToRobot(theRobotPose,Vector2f(-2300,-1200));
+   static float flag = 1.f;
+   const Vector2f jinRight=Transformation::fieldToRobot(theRobotPose,Vector2f(-2900,-1200));
+   const Vector2f jinLeft=Transformation::fieldToRobot(theRobotPose,Vector2f(-2900,1200));
+   
+    static int marker=0;
+  const Vector2f middle=Transformation::fieldToRobot(theRobotPose,Vector2f(-3200.f,0.f));
+    initial_state(start)
+   {
+       transition
+    {
+        if(state_time>1000)
+         goto searchForBall;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      Stand();
+    }
+  }
+ 
+   state(searchForBall)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+                goto judge;
+          for(int i=0;i<t.size();i++)
+			{
+	       if(t[i].number==1 && theFrameInfo.getTimeSince(t[i].theBallModel.timeWhenLastSeen)<200)//先判断守门员是否看到球
+	       {
+	          globalBall1 = Transformation::robotToField(t[i].theRobotPose, t[i].theBallModel.estimate.position);
+	          ball1 = Transformation::fieldToRobot(theRobotPose, globalBall1);
+	          goto turntoball;
+	       }
+           if(t[i].number==2 && theFrameInfo.getTimeSince(t[i].theBallModel.timeWhenLastSeen)<200)//再判断defender1是否看到球
+	      {
+	         globalBall1 = Transformation::robotToField(t[i].theRobotPose, t[i].theBallModel.estimate.position);
+	         ball1 = Transformation::fieldToRobot(theRobotPose, globalBall1);
+	         goto turntoball;
+	      }
+          if(t[i].number==4 && theFrameInfo.getTimeSince(t[i].theBallModel.timeWhenLastSeen)<200)//先判断守门员是否看到球
+	       {
+	          globalBall1 = Transformation::robotToField(t[i].theRobotPose, t[i].theBallModel.estimate.position);
+	          ball1 = Transformation::fieldToRobot(theRobotPose, globalBall1);
+	          goto turntoball;
+	       }
+           if(t[i].number==3 && theFrameInfo.getTimeSince(t[i].theBallModel.timeWhenLastSeen)<200)//先判断守门员是否看到球
+	       {
+	          globalBall1 = Transformation::robotToField(t[i].theRobotPose, t[i].theBallModel.estimate.position);
+	          ball1 = Transformation::fieldToRobot(theRobotPose, globalBall1);
+	          goto turntoball;
+	       }
+         }
+              if(state_time>7000)
+      {
+        for(int i=0;i<t.size();i++)
+        {
+            if(flag==1.f&&t[i].number==2&&t[i].isPenalized==false)
+            goto turnToMidSpoty;
+        if(flag==2.f&&t[i].number==2&&t[i].isPenalized==false)
+            goto turnToRightSpoty;
+        if(flag==3.f&&t[i].number==2&&t[i].isPenalized==false)
+            goto turnToLeftSpoty;
+        }
+        if(flag==1.f)
+            goto turnToMidSpot;
+        if(flag==2.f)
+            goto turnToRightSpot;
+        if(flag==3.f)
+            goto turnToLeftSpot;
+          
+      }
+      
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+    
+      }
+      
+  }
+  
+  state(judge)
+  {
+      transition
+      {
+          for(int i=0;i<t.size();i++)
+          {
+              if(t[i].number==2)
+              {
+                  marker=1;
+                  break;
+              }
+          }
+        if(marker==0)//defendernew
+        {
+                  if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+                  goto searchForBall;
+                  if(theLibCodeRelease.timeSinceBallWasSeen<300)
+                  {
+                    {
+                       if(a<0)//球在后场
+                       { 
+                           if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                           {
+                               if(a>-3600)//球在我的禁区
+                              {
+                                if(b>0)
+                                goto walkToJinquQianRight;
+                                else goto walkToJinquQianLeft;
+                              }
+                                if(a<-3600||a==-3600)
+                              {
+                                if(b>0)
+                                goto walkToJinquRight;
+                                else
+                                goto walkToJinquLeft;
+                              }
+                            }     
+                          if(a<-3900&&((b>theFieldDimensions.yPosLeftPenaltyArea)||(b<theFieldDimensions.yPosRightPenaltyArea)))//判断是否在禁区的一侧
+                          {
+                              if((d>theFieldDimensions.yPosLeftPenaltyArea && b>theFieldDimensions.yPosLeftPenaltyArea && a<-3900.f&& c<-3900.f)||(a<-3900.f&&c<-3900.f&&d<theFieldDimensions.yPosRightPenaltyArea && b<theFieldDimensions.yPosRightPenaltyArea))
+                                goto turnToBall;
+                              if((d>theFieldDimensions.yPosLeftPenaltyArea && b<theFieldDimensions.yPosRightPenaltyArea &&a<-3900.f&& c<-3900.f)||(a<-3900.f&& c<-3900.f&&d<theFieldDimensions.yPosRightPenaltyArea && b>theFieldDimensions.yPosLeftPenaltyArea))
+                                goto walkToMiddle;
+                              else goto turnToBall;
+                          }
+                          else //走到跟球一条线挡住敌人
+                          {
+                              if(c>a)
+                              goto walkToBall;
+                              if(c<a)
+                              {
+                                  if(ball.norm()>600.f)
+                                  {
+                                      if(b<theFieldDimensions.yPosLeftGoal-150&&b>theFieldDimensions.yPosRightGoal+150)//方向注意
+                                      goto turnToLine2;//走到和球y坐标相同
+                                      if(b>theFieldDimensions.yPosLeftGoal-150||b<theFieldDimensions.yPosRightGoal+150)
+                                      {
+                                           if(chuizu.y()<theFieldDimensions.yPosLeftPenaltyArea && chuizu.y()>theFieldDimensions.yPosRightPenaltyArea&& chuizu.x()<theFieldDimensions.xPosOwnPenaltyArea)
+                                           goto turnToQiedian;
+                                           else goto turnToLine;
+                                      }
+                                  }
+                                  if(ball.norm()<600.f||ball.norm()==600.f)    
+                                      goto turnToBall;
+                              }
+                          }
+                        }
+                  if(a>theFieldDimensions.centerCircleRadius)//球在前场或找不到
+                  goto walkToMiddle;;
+                 if(a>0&&a<theFieldDimensions.centerCircleRadius)//球在中间缓冲区
+                  goto turnToBall;
+                  }
+                }
+              }
+        if(marker==1)//defender2y
+        {
+            if(globalBall.x()>0||globalBall.x()==0)//球在前半场
+              {
+                  if(globalBall.x()>400)
+                      goto turnToInitial;//球在较前场
+                  if(globalBall.x()>0&&globalBall.x()<400)//球在中间缓冲区
+                  {
+                      for(int i=0;i<t.size();i++)
+	                {
+	       
+             if(t[i].number==2 && a>c && c>t[i].theRobotPose.translation.x())
+             goto judge;
+             if(t[i].number==2 && t[i].theRobotPose.translation.x()>a && a>c)//1yball2y
+             goto walkToBally;
+             if(t[i].number==2 && a>t[i].theRobotPose.translation.x() && t[i].theRobotPose.translation.x()>c)//ball1y2y
+            goto walkToInitial;
+             if(t[i].number==2 &&c>a&&a>t[i].theRobotPose.translation.x())//2yball1y
+             goto walkToInitial;
+             if(t[i].number==2 &&c>t[i].theRobotPose.translation.x()&&t[i].theRobotPose.translation.x()>a)//2y1yball
+             goto walkToInitial;
+             if(t[i].number==2 &&t[i].theRobotPose.translation.x()>c&&c>a)//1y2yball
+             goto walkToBally;
+                     }
+                  }
+              }
+              if (globalBall.x()<0)//球在后半场判断球的位置
+              {
+                  if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b<0)//球在禁区右边
+                    {
+                        if(a<-3600)
+                        goto turnToJinquQianRighty;
+                        else goto walkToBally;
+                    }
+                     if(b==0||b>0)
+                         //goto turnToJinquQianLeft;;//defender1y用的
+                         goto turnToJinquRighty ;
+                }
+                else 
+                {
+                    if(b>450)
+                        goto walkToInitial;
+                    if(b<450&&b>-450)
+                    {
+                        for(int i=0;i<t.size();i++)
+	                {
+	       
+             if(t[i].number==2 && a>c && c>t[i].theRobotPose.translation.x())
+             goto judge;
+             if(t[i].number==2 && t[i].theRobotPose.translation.x()>a && a>c)//1yball2y
+             goto walkToBally;
+             if(t[i].number==2 && a>t[i].theRobotPose.translation.x() && t[i].theRobotPose.translation.x()>c)//ball1y2y
+            goto walkToInitial;
+             if(t[i].number==2 &&c>a&&a>t[i].theRobotPose.translation.x())//2yball1y
+             goto walkToInitial;
+             if(t[i].number==2 &&c>t[i].theRobotPose.translation.x()&&t[i].theRobotPose.translation.x()>a)//2y1yball
+             goto walkToInitial;
+             if(t[i].number==2 &&t[i].theRobotPose.translation.x()>c&&c>a)//1y2yball
+             goto walkToBally;
+                     }
+                    }    
+                    if(b<-450)
+                    {
+                        if(c>a)
+                        goto walkToBally;//turnToRaoqiuhou;
+                        if(c<a)
+                        {
+                            if(ball.norm()>600.f)
+                            {
+                                if(b<theFieldDimensions.yPosLeftGoal-150&&b>theFieldDimensions.yPosRightGoal+150)//方向注意
+                               goto turnToLine2y;//走到和球y坐标相同
+                              if(b>theFieldDimensions.yPosLeftGoal-150||b<theFieldDimensions.yPosRightGoal+150)
+                               goto turnToLiney;
+                            }
+                           if(ball.norm()==600.f||ball.norm()<600.f)
+                           goto turnToBally;
+                        }
+                    }
+                }
+              }
+        }
+          
+      }
+  }
+  state(turnToMidSpot)
+  {
+    transition
+    {
+        if(midSpot.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBall;
+      }
+      if(std::abs(midSpot.angle()) < 2_deg)
+        goto yiDongToMidSpot;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(midSpot.angle(), 0.f, 0.f));
+    }
+  }
+  state(yiDongToMidSpot)
+  {
+     transition 
+     {
+    
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBall; 
+        }
+        if(midSpot.norm()<200.f)
+        {
+            flag=2.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+        if(state_time>2000&&std::abs(midSpot.angle()) > 40_deg)
+        goto turnToMidSpot;  
+     }
+     action
+     {
+         //LookRound();
+         HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,midSpot.x(),midSpot.y()));
+     }
+  }
+  
+   state(turnToRightSpot)
+  {
+    transition
+    {
+    
+        if(rightSpot.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBall;
+      }
+      if(std::abs(rightSpot.angle()) < 2_deg)
+        goto yiDongToRightSpot;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(rightSpot.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(yiDongToRightSpot)
+  {
+     transition 
+     {
+       
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBall; 
+        }
+        if(rightSpot.norm()<200.f)
+        {
+            flag=3.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+      if(state_time>2000&&std::abs(rightSpot.angle()) > 40_deg)
+        goto turnToRightSpot;  
+     }
+     action
+     {
+         //LookRound();
+          HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,rightSpot.x(),rightSpot.y()));
+     }
+  }
+  
+   state(turnToLeftSpot)
+  {
+    transition
+    {
+      
+        if(leftSpot.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBall;
+      }
+      if(std::abs(leftSpot.angle()) < 2_deg)
+        goto yiDongToLeftSpot;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(leftSpot.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(yiDongToLeftSpot)
+  {
+     transition 
+     {
+        
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBall; 
+        }
+        if(leftSpot.norm()<200.f)
+        {
+            flag=1.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+                if(state_time>2000&&std::abs(leftSpot.angle()) > 40_deg)
+        goto turnToLeftSpot;  
+     }
+     action
+     {
+        //LookRound();
+         HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,leftSpot.x(),leftSpot.y()));
+     }
+  }
+  
+  state(turnToMidSpoty)
+  {
+    transition
+    {
+        
+        if(midSpoty.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBally;
+      }
+      if(std::abs(midSpoty.angle()) < 2_deg)
+        goto yiDongToMidSpoty;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(midSpoty.angle(), 0.f, 0.f));
+    }
+  }
+  state(yiDongToMidSpoty)
+  {
+     transition 
+     {
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBally; 
+        }
+        if(midSpoty.norm()<200.f)
+        {
+            flag=2.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+        if(state_time>2000&&std::abs(midSpoty.angle()) > 40_deg)
+        goto turnToMidSpoty;  
+     }
+     action
+     {
+         //LookRound();
+         HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,midSpoty.x(),midSpoty.y()));
+     }
+  }
+  
+   state(turnToRightSpoty)
+  {
+    transition
+    {
+      
+        if(rightSpoty.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBally;
+      }
+      if(std::abs(rightSpoty.angle()) < 2_deg)
+        goto yiDongToRightSpoty;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(rightSpoty.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(yiDongToRightSpoty)
+  {
+     transition 
+     {
+        
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBally; 
+        }
+        if(rightSpoty.norm()<200.f)
+        {
+            flag=3.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+      if(state_time>2000&&std::abs(rightSpoty.angle()) > 40_deg)
+        goto turnToRightSpoty;  
+     }
+     action
+     {
+         //LookRound();
+          HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,rightSpoty.x(),rightSpoty.y()));
+     }
+  }
+  
+   state(turnToLeftSpoty)
+  {
+    transition
+    {
+      
+        if(leftSpoty.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+      {
+        flag=1.f;  
+        goto turnToBally;
+      }
+      if(std::abs(leftSpoty.angle()) < 2_deg)
+        goto yiDongToLeftSpoty;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(leftSpoty.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(yiDongToLeftSpoty)
+  {
+     transition 
+     {
+        
+         if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        {
+          flag=1.f;
+          goto turnToBally; 
+        }
+        if(leftSpoty.norm()<200.f)
+        {
+            flag=1.f;
+            goto searchForBall;
+        }
+        if(state_time>14000.f)
+        goto searchForBall;
+                if(state_time>2000&&std::abs(leftSpoty.angle()) > 40_deg)
+        goto turnToLeftSpoty;  
+     }
+     action
+     {
+        //LookRound();
+         HeadControlMode(HeadControl::lookForward);
+         WalkToTarget(Pose2f(50.f,50.f,50.f),Pose2f(0_deg,leftSpoty.x(),leftSpoty.y()));
+     }
+  }
+ 
+  state(turntoball)//用队友信息转向球
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen <300)
+            goto judge;
+          if(theLibCodeRelease.timeSinceBallWasSeen >4000)
+            goto searchForBall;
+          if(globalBall1.x()>0||globalBall1.x()==0)//球在前半场
+        {
+                  if(globalBall1.x()>800)
+                      goto turnToInitial;//球在较前场则不管
+          if(ball1.angle()<5_deg)//转向了球则用自己的信息
+              goto judge;
+        }
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(panduanBack)//从walkToBall跳进去的
+  {
+      transition
+    {
+        if(c>250)//不过半场参数需要改动
+            goto turnToBack;
+        else
+            goto searchForBall;
+    }
+       
+      action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      Stand();
+    }
+      
+  }
+ 
+  state(walkToBally)
+  {
+      transition
+      {
+          
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+              goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+         if(std::abs(theBallModel.estimate.position.angle()) > 30_deg)
+             goto turnToBally;
+        if(ball.norm() < 500.f&&(c-a)<0)
+          goto alignToTargety;
+		   
+		if(ball.norm() < 250.f&&(c-a)>0)
+		  goto raoqiuy;
+      }
+      action
+      {
+          LookAtBall();
+          WalkToTarget(Pose2f(50.f, 50.f, 50.f), theBallModel.estimate.position);//50.f50.f50.f
+          
+      }
+  }
+  
+  state(alignToGoaly)
+  {
+      transition
+    {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if (c>250)
+            goto walkToBack;
+        if(a>400)
+              goto walkToInitial;
+        if(d>600)
+             goto walkToInitial;
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg && std::abs(theBallModel.estimate.position.y()) < 100.f)
+            goto alignBehindBally;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(35.f, 35.f, 35.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 400.f, theBallModel.estimate.position.y()));
+    }
+  }
+  
+  state(alignBehindBally)
+  {
+      transition
+    {
+      if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if (c>250)
+            goto panduanBack;
+       if(a>400)
+              goto walkToInitial;
+              if(d>600)
+             goto walkToInitial;
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(theLibCodeRelease.between(theBallModel.estimate.position.y(), 30.f, 60.f)
+         && theLibCodeRelease.between(theBallModel.estimate.position.x(), 140.f, 180.f)
+         && std::abs(theLibCodeRelease.angleToGoal) < 2_deg)
+            goto kick;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(20.f, 20.f, 20.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 175.f, theBallModel.estimate.position.y() - 35.f));
+    }
+  }
+  
+  state(kick)//需要改成大脚
+  {
+      transition
+    {
+      if(state_time > 3000 || (state_time > 10 && action_done))
+        goto start;
+    }
+    action
+    {
+      LookAtBall();
+      InWalkKick(WalkKickVariant(WalkKicks::forward, Legs::left), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 160.f, theBallModel.estimate.position.y() - 55.f));
+    }
+  }
+  
+  state(dangqiuy)//走到球与球门连线的垂直距离上
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+              if((std::abs(chuiy) > 200))
+                goto turnToLiney;
+          if(sqrt(chuix*chuix+chuiy*chuiy)<100)
+              goto turnToBally;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(theta1,chuix,chuiy));
+           
+      }
+  }
+  
+  state(turnToLiney)//球在球门两边就走到垂足
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+            if(std::abs(chuiy) < 100)
+                goto dangqiuy;
+      }
+      action
+      {
+          LookAtBall();
+          //WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(theta1,0.f,0.f));
+         if(chuiy<-100)
+          WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(chuiy>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(turnToBack)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen>10000)
+              goto searchForBall;
+          if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+              goto walkToBack;
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(theLibCodeRelease.angleToGoal>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(theLibCodeRelease.angleToGoal<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToBack)//不过半场
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen>8000||back.norm()<100)
+              goto searchForBall;
+          if(std::abs(back.angle()) > 10_deg)
+              goto turnToBack;
+
+              
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(50.f,80.f,80.f),Pose2f(theLibCodeRelease.angleToGoal,back.x(),back.y()));
+      }
+  }
+ 
+   state(raoqiuy)
+  {
+    transition
+    {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if(theLibCodeRelease.timeSinceBallWasSeen > theBehaviorParameters.ballNotSeenTimeOut)
+        goto searchForBall;
+      if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+        goto alignBehindBally;
+        
+    }
+    action
+    {
+      LookAtBall();
+	  if(a>-3700)
+      {
+          if(b<-110)
+           WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, -100.f));
+          if(b>110)
+          WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, 100.f));
+      }
+      else
+      {
+          if(b>theFieldDimensions.yPosCenterGoal)
+              WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, 100.f));
+           if(b<theFieldDimensions.yPosCenterGoal)
+              WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, -100.f));   
+      }
+	  
+    }
+  }
+
+  state(turnToLine2y)//球在球门方向以内，走到和球一条线上
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+         if(b<-750||b>750)
+              goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen>10000)
+              goto searchForBall;
+            if(std::abs(line2.y()) < 100)
+                goto dangqiu2y;
+      }
+      action
+      {
+          LookAtBall();
+         // WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(line2.angle(),0.f,0.f));
+         //WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+          if(line2.y()<-100)
+          WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(line2.y()>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+      
+  }
+
+  state(dangqiu2y)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+         if(b<-750||b>750)
+              goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000&&state_time>10000)
+              goto searchForBall;
+              if(std::abs(line2.y()) > 200)
+                goto turnToLine2y;
+          if(sqrt(line2.x()*line2.x()+line2.y()*line2.y())<300)
+              goto turnToBally;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(line2.angle(),line2.x(),line2.y()));
+           
+      }
+  }
+  
+  state(alignToTargety)
+  {
+       transition
+    {
+
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;  
+        if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;    
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(theLibCodeRelease.between(theBallModel.estimate.position.y(), 20.f, 50.f)
+         && theLibCodeRelease.between(theBallModel.estimate.position.x(), 140.f, 170.f)
+         )
+            goto kick;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(20.f, 20.f, 20.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 160.f, theBallModel.estimate.position.y() - 30.f));
+    }
+  }
+  
+  
+  state(turnToQiediany)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+          if(chuizu.y()>theFieldDimensions.yPosLeftPenaltyArea || chuizu.y()<theFieldDimensions.yPosRightPenaltyArea
+            || chuizu.x()>theFieldDimensions.xPosOwnPenaltyArea)
+                goto searchForBall;
+            if(std::abs(qie.angle()) < 5_deg)
+                goto walkToQiediany;
+      
+      }
+      action
+      {
+          LookAtBall();
+          if(qie.y()<-100)
+             WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(qie.y()>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToQiediany)
+  {
+      transition
+      {
+         if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+          if(chuizu.y()>theFieldDimensions.yPosLeftPenaltyArea || chuizu.y()<theFieldDimensions.yPosRightPenaltyArea
+            || chuizu.x()>theFieldDimensions.xPosOwnPenaltyArea)
+                goto searchForBall;
+              if((std::abs(qie.angle()) > 15_deg))
+                goto turnToQiediany;
+          if(sqrt(qie.x()*qie.x()+qie.y()*qie.y())<100)
+              goto turnToBally;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(qie.angle(),qie.x(),qie.y()));
+           
+      }
+  }
+  
+  state(walkToInitial)//走到初始位置
+  {
+      transition
+      {
+         if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(std::abs(theLibCodeRelease.angleToGoal) > 25_deg)//15
+             goto turnToInitial;
+        if(theLibCodeRelease.timeSinceBallWasSeen < 300&&state_time>4000)
+            goto judge; 
+        if(initial.norm()<200.f)
+            goto searchForBall;
+        if(state_time>10000)
+        goto searchForBall;
+         
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(theLibCodeRelease.angleToGoal,initial.x(),initial.y()));
+          
+      }
+  }
+  state(turnToBally)
+  {
+    transition
+    {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;  
+        if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+        if(theLibCodeRelease.timeSinceBallWasSeen > theBehaviorParameters.ballNotSeenTimeOut)
+        goto searchForBall;
+      if(std::abs(theBallModel.estimate.position.angle()) < 5_deg)
+        goto walkToBally;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(theBallModel.estimate.position.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(turnToInitial)
+  {
+      transition
+      {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(initial.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300&&initial.norm()<200.f)
+        goto judge;
+      if(std::abs(theLibCodeRelease.angleToGoal) < 5_deg)
+        goto walkToInitial;
+        if(state_time>10000)
+        goto searchForBall;
+
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(theLibCodeRelease.angleToGoal>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(theLibCodeRelease.angleToGoal<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          
+          
+      }
+  }
+  
+  state(turnToJinquRighty)//panduanBall跳进去
+  {
+      transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquRight.angle()) < 10_deg)
+             goto walkToJinquRighty;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquRight.angle()>5_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquRight.angle()<-5_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(turnToJinquRight)//panduanBall跳进去
+  {
+      transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquRight.angle()) < 10_deg)
+             goto walkToJinquRight;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquRight.angle()>5_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquRight.angle()<-5_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToJinquRighty)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquRight.angle()) > 15_deg)
+             goto turnToJinquRighty;
+          if(ball.norm()<200)
+             goto walkToBally;
+         
+      }
+      action
+      {
+          //HeadControlMode(HeadControl::lookForward);
+          LookAtBall();
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquRight.angle(),jinquRight.x(),jinquRight.y()));
+          
+      }
+  }
+ state(walkToJinquRight)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquRight.angle()) > 15_deg)
+             goto turnToJinquRight;
+          if(ball.norm()<200)
+             goto walkToBall;
+         
+      }
+      action
+      {
+          //HeadControlMode(HeadControl::lookForward);
+          LookAtBall();
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquRight.angle(),jinquRight.x(),jinquRight.y()));
+          
+      }
+  }
+  state(turnToJinquQianRight)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b<0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBall;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+             goto walkToJinquQianRight;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquqianRight.angle()>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquqianRight.angle()<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(turnToJinquQianRighty)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b<0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBally;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+             goto walkToJinquQianRighty;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquqianRight.angle()>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquqianRight.angle()<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToJinquQianRight)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b<0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBall;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquqianRight.angle()) > 15_deg)
+             goto turnToJinquQianRight;
+         
+      }
+      action
+      {
+          LookAtBall();
+          //HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquqianRight.angle(),jinquqianRight.x(),jinquqianRight.y()));
+          
+      }
+  }
+  
+  state(walkToJinquQianRighty)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+          if (c>250)
+              goto walkToBack;
+          if(d>600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b<0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBally;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquqianRight.angle()) > 15_deg)
+             goto turnToJinquQianRighty;
+         
+      }
+      action
+      {
+          LookAtBall();
+          //HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquqianRight.angle(),jinquqianRight.x(),jinquqianRight.y()));
+          
+      }
+  }
+  
+  state(turnToBall)
+  {
+    transition
+    {
+      if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if((c<-3900&&d<theFieldDimensions.yPosLeftPenaltyArea)&&(d>theFieldDimensions.yPosRightPenaltyArea))//不能进禁区
+           goto walkToMiddle;
+        if(theLibCodeRelease.timeSinceBallWasSeen > theBehaviorParameters.ballNotSeenTimeOut)
+        goto searchForBall;
+      if(std::abs(theBallModel.estimate.position.angle()) < 5_deg)
+        goto walkToBall;
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      WalkToTarget(Pose2f(50.f, 50.f, 50.f), Pose2f(theBallModel.estimate.position.angle(), 0.f, 0.f));
+    }
+  }
+  
+  state(turnToMiddle)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(middle.norm()<200.f)
+        goto searchForBall;
+      if(theLibCodeRelease.timeSinceBallWasSeen < 300)
+        goto judge;
+      if(std::abs(theLibCodeRelease.angleToGoal) < 5_deg)
+        goto walkToMiddle;
+        if((c<-3900&&d<theFieldDimensions.yPosLeftPenaltyArea)&&(d>theFieldDimensions.yPosRightPenaltyArea))//不能进禁区
+           goto walkToMiddle;
+        if(state_time>10000)
+        goto searchForBall;
+            
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+           if(theLibCodeRelease.angleToGoal>0)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(theLibCodeRelease.angleToGoal<0)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+
+  state(walkToMiddle)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(std::abs(theLibCodeRelease.angleToGoal) > 25_deg)//15
+             goto turnToMiddle;
+        if(theLibCodeRelease.timeSinceBallWasSeen < 300&&state_time>4000)
+            goto judge;
+        if(middle.norm()<200.f)
+            goto searchForBall;
+            if((c<-3900&&d<theFieldDimensions.yPosLeftPenaltyArea)&&(d>theFieldDimensions.yPosRightPenaltyArea))//不能进禁区
+           goto turnToMiddle;
+        if(state_time>10000)
+        goto searchForBall;
+         /* if(theLibCodeRelease.timeSinceBallWasSeen>9000)//&&state_time>10000
+              goto searchForBall;
+              if(middle.norm()<100)
+                  goto turnToBall;*/
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(theLibCodeRelease.angleToGoal,middle.x(),middle.y()));
+      }
+  }
+  
+  state(walkToBall)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+              goto panduanBack;
+        if((c<-3900&&d<theFieldDimensions.yPosLeftPenaltyArea)&&(d>theFieldDimensions.yPosRightPenaltyArea))//不能进禁区
+           goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+          //if(theBallModel.estimate.position.norm() < 500.f)
+              //goto alignToGoal;
+         if(std::abs(theBallModel.estimate.position.angle()) > 35_deg)
+             goto turnToBall;
+        if(ball.norm() < 500.f&&(c-a)<0)//theBallModel.estimate.position.norm() 
+          goto alignToTarget;
+		   
+		if(ball.norm() < 250.f&&(c-a)>0)
+		  goto raoqiu;
+      }
+      action
+      {
+          LookAtBall();
+          WalkToTarget(Pose2f(50.f, 50.f, 50.f), theBallModel.estimate.position);//50.f50.f50.f
+          
+      }
+  }
+  
+  state(alignToGoal)
+  {
+      transition
+    {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if (c>250)
+            goto panduanBack;
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg && std::abs(theBallModel.estimate.position.y()) < 100.f)
+            goto alignBehindBall;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(100.f, 100.f, 100.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 400.f, theBallModel.estimate.position.y()));
+    }
+  }
+  
+  state(alignBehindBall)
+  {
+      transition
+    {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if (c>250)
+            goto panduanBack;
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(theLibCodeRelease.between(theBallModel.estimate.position.y(), 20.f, 50.f)
+         && theLibCodeRelease.between(theBallModel.estimate.position.x(), 140.f, 170.f)
+         && std::abs(theLibCodeRelease.angleToGoal) < 2_deg)
+            goto kick;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 150.f, theBallModel.estimate.position.y() - 30.f));
+    }
+  }
+  
+  
+  state(dangqiu)//走到球与球门连线的垂直距离上
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+              if((std::abs(chuiy) > 200))
+                goto turnToLine;
+          if(sqrt(chuix*chuix+chuiy*chuiy)<100)
+              goto turnToBall;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(theta1,chuix,chuiy));
+           
+      }
+  }
+  
+  state(turnToLine)//球在球门两边就走到垂足
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+            if(std::abs(chuiy) < 50)
+                goto dangqiu;
+      }
+      action
+      {
+          LookAtBall();
+          //WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(theta1,0.f,0.f));
+         if(chuiy<-100)
+          WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(chuiy>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+  }
+  
+  
+   state(raoqiu)
+  {
+    transition
+    {
+        if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+    
+        if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+        if(theLibCodeRelease.timeSinceBallWasSeen > theBehaviorParameters.ballNotSeenTimeOut)
+        goto searchForBall;
+      if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+        goto alignBehindBall;
+        
+    }
+    action
+    {
+      HeadControlMode(HeadControl::lookForward);
+      if(a>-3700)
+      {
+          if(b<-110)
+           WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, -100.f));
+          if(b>110)
+          WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, 100.f));
+      }
+      else
+      {
+          if(b>theFieldDimensions.yPosCenterGoal)
+              WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, 100.f));
+           if(b<theFieldDimensions.yPosCenterGoal)
+              WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(ball.angle(), theBallModel.estimate.position.x() - 220.f, -100.f));   
+      }
+          
+	  
+	  
+    }
+  }
+  
+  state(turnToLine2)//球在球门方向以内，走到和球一条线上
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>10000)
+              goto searchForBall;
+            if(std::abs(line2.y()) < 50)
+                goto dangqiu2;
+      }
+      action
+      {
+          LookAtBall();
+         // WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(line2.angle(),0.f,0.f));
+         //WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+          if(line2.y()<-100)
+          WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(line2.y()>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+      
+  }
+
+  state(dangqiu2)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000&&state_time>10000)
+              goto searchForBall;
+              if(std::abs(line2.y()) > 200)
+                goto turnToLine2;
+          if(sqrt(line2.x()*line2.x()+line2.y()*line2.y())<300)
+              goto turnToBall;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(line2.angle(),line2.x(),line2.y()));
+           
+      }
+  }
+  
+  state(alignToTarget)
+  {
+       transition
+    {
+       if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+        if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+        if(theLibCodeRelease.timeSinceBallWasSeen > 5000)
+            goto searchForBall;
+        if(theLibCodeRelease.between(theBallModel.estimate.position.y(), 20.f, 50.f)
+         && theLibCodeRelease.between(theBallModel.estimate.position.x(), 140.f, 170.f)
+         )
+            goto kick;
+    }
+    action
+    {
+      LookAtBall();
+      WalkToTarget(Pose2f(80.f, 80.f, 80.f), Pose2f(theLibCodeRelease.angleToGoal, theBallModel.estimate.position.x() - 150.f, theBallModel.estimate.position.y() - 30.f));
+    }
+  }
+  
+  
+  state(turnToQiedian)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+            if(std::abs(qie.angle()) < 5_deg)
+                goto walkToQiedian;
+      
+      }
+      action
+      {
+          LookAtBall();
+          if(qie.y()<-100)
+             WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+          if(qie.y()>100)
+              WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToQiedian)
+  {
+      transition
+      {
+         if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if (c>250)
+            goto panduanBack;
+            if(a>300)
+                goto walkToMiddle;
+          if(theLibCodeRelease.timeSinceBallWasSeen>5000)
+              goto searchForBall;
+              if((std::abs(qie.angle()) > 15_deg))
+                goto turnToQiedian;
+          if(sqrt(qie.x()*qie.x()+qie.y()*qie.y())<100)
+              goto turnToBall;
+      }
+      action
+      {
+        LookAtBall();
+		WalkToTarget(Pose2f(60.f,60.f,60.f),Pose2f(qie.angle(),qie.x(),qie.y()));
+           
+      }
+  }
+  
+  state(turnToJinLeft)
+  {
+            transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToMiddle;
+          if (c>250)
+              goto walkToBack;
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+             goto walkToJinLeft;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinLeft.angle()>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinLeft.angle()<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToJinLeft)
+  {
+      transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToMiddle;
+          if (c>250)
+              goto walkToBack;
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinLeft.angle()) > 15_deg)
+             goto turnToJinLeft;
+            if(ball.norm()<200)
+            goto walkToBall;
+         
+      }
+      action
+      {
+          LookAtBall();
+          //HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinLeft.angle(),jinLeft.x(),jinLeft.y()));
+          
+      }
+  }
+  
+  state(turnToJinRight)
+  {
+            transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToMiddle;
+          if (c>250)
+              goto walkToBack;
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(theLibCodeRelease.angleToGoal) < 10_deg)
+             goto walkToJinLeft;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinRight.angle()>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinRight.angle()<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToJinRight)
+  {
+      transition
+      {
+           if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToMiddle;
+          if (c>250)
+              goto walkToBack;
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinRight.angle()) > 15_deg)
+             goto turnToJinLeft;
+            if(ball.norm()<200)
+            goto walkToBall;
+         
+      }
+      action
+      {
+          LookAtBall();
+          //HeadControlMode(HeadControl::lookForward);
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinRight.angle(),jinRight.x(),jinRight.y()));
+          
+      }
+  }
+  
+  state(walkToJinquLeft)
+  {
+      transition
+      {
+         if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+        if (c>250)
+            goto walkToBack;
+        if(d<-600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b>0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBall;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquLeft.angle()) > 15_deg)
+             goto turnToJinquQianLeft;
+         
+      }
+      action
+      {
+          LookAtBall();
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquLeft.angle(),jinquLeft.x(),jinquLeft.y()));
+          
+      }
+  }
+  
+  state(turnToJinquLeft)//panduanBall跳进去  //defender1y用的
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+        if (c>250)
+            goto walkToBack;
+        if(d<-600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquLeft.angle()) < 10_deg)
+             goto walkToJinquLeft;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquLeft.angle()>5_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquLeft.angle()<-5_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+  
+  state(walkToJinquQianLeft)
+  {
+      transition
+      {
+         if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+        if (c>250)
+            goto walkToBack;
+        if(d<-600)
+             goto walkToInitial;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(a>-3000||b>1100||b<-1100)//球在禁区附近
+          goto searchForBall;
+          if(state_time>15000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquqianLeft.angle()) > 15_deg)
+             goto turnToJinquQianLeft;
+         if(ball.norm()<200)
+             goto walkToBall;
+         
+         
+      }
+      action
+      {
+          LookAtBall();
+          WalkToTarget(Pose2f(80.f,80.f,80.f),Pose2f(jinquqianLeft.angle(),jinquqianLeft.x(),jinquqianLeft.y()));
+          
+      }
+  }
+  
+   state(turnToJinquQianLeft)
+  {
+      transition
+      {
+          if(theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+          if(a>400)
+              goto walkToInitial;
+        if (c>250)
+            goto walkToBack;
+        if(d<-600)
+             goto walkToInitial;
+          if(a<-3000&&b<1100&&b>-1100)//球在禁区附近
+                {
+            
+                    if(b>0)//球在禁区右边
+                    {
+                        if(a>-3600)
+                        goto walkToBall;
+                    }
+                }
+            if(a>-3000||b>1100||b<-1100)
+                goto searchForBall;
+          if(theLibCodeRelease.timeSinceBallWasSeen >10000)
+          goto searchForBall;
+          if(state_time>8000&&theLibCodeRelease.timeSinceBallWasSeen<300)
+              goto judge;
+         if(std::abs(jinquqianLeft.angle()) < 10_deg)
+             goto walkToJinquQianLeft;
+         
+      }
+      action
+      {
+          HeadControlMode(HeadControl::lookForward);
+          if(jinquqianLeft.angle()>10_deg)
+               WalkAtRelativeSpeed(Pose2f(1.f, 0.f, 0.f));
+           if(jinquqianLeft.angle()<-10_deg)
+               WalkAtRelativeSpeed(Pose2f(-1.f, 0.f, 0.f));
+      }
+  }
+ 
+  
+}
+
+
