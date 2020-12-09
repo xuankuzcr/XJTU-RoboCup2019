@@ -3,5 +3,5 @@
 * 整个代码体系借鉴于 [官方的BHumanCodeRelease2019](https://github.com/bhuman/BHumanCodeRelease)
 * 包含前锋，中锋，双后卫，守门员五个位置
 * 作为2020年策略组参赛队员借鉴的依据
-
+* Github tutorial for XJTU-RoboCup | Author: **Chunran Zheng**.
 
